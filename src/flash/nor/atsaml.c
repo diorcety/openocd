@@ -9,78 +9,103 @@
 
 #include <target/cortex_m.h>
 
+#define CORTEX_M23_MPU_CTRL 0xE000ED94
+
 #define SAML_L10_NUM_PROT_REGIONS	3
 #define SAML_L11_NUM_PROT_REGIONS	6
-#define SAML_PAGE_SIZE_MAX	1024
+#define SAML_PAGE_SIZE_MAX		1024
 
-#define SAML_DATA_FLASH		((uint32_t)0x00400000)	/* physical Data Flash memory */
+#define SAML_DATA_FLASH			((uint32_t)0x00400000)	/* physical Data Flash memory */
 #define SAML_FLASH			((uint32_t)0x00000000)	/* physical Flash memory */
-#define SAML_USER_ROW		((uint32_t)0x00804000)	/* User Row of Flash */
+#define SAML_USER_ROW			((uint32_t)0x00804000)	/* User Row of Flash */
 #define SAML_BOCOR			((uint32_t)0x0080C000)	/* NVM Boot Configuration Row */
-#define SAML_PAC1			0x41000000	/* Peripheral Access Control 1 */
-#define SAML_DSU			0x41002000	/* Device Service Unit */
-#define SAML_NVMCTRL		0x41004000	/* Non-volatile memory controller */
+#define SAML_PAC1			0x41000000		/* Peripheral Access Control 1 */
+#define SAML_DSU			0x41002100		/* Device Service Unit (external) */
+#define SAML_NVMCTRL			0x41004000		/* Non-volatile memory controller */
 
-#define SAML_DSU_STATUSA        1               /* DSU status register */
-#define SAML_DSU_DID		0x18		/* Device ID register */
-#define SAML_DSU_CTRL_EXT	0x100		/* CTRL register, external access */
+#define SAML_DSU_STATUSA		0x01			/* DSU status A register */
+#define SAML_DSU_STATUSA_CRSTEXT	(1 << 1)
+#define SAML_DSU_STATUSA_BREXT		(1 << 5)
+#define SAML_DSU_STATUSB		0x02			/* DSU status B register */
+#define SAML_DSU_STATUSB_DAL		0x03
+#define SAML_DSU_STATUSB_BCCD0		0x40
+#define SAML_DSU_STATUSB_BCCD1		0x80
+#define SAML_DSU_DID			0x18			/* Device ID register */
+#define SAML_DSU_CTRL_EXT		0x100			/* CTRL register, external access */
+#define SAML_DSU_BCC0			0x20			/* Boot Communication Channel 0 register */
+#define SAML_DSU_BCC1			0x24			/* Boot Communication Channel 1 register */
 
-#define SAML_NVMCTRL_CTRLA		0x00	/* NVM control A register */
-#define SAML_NVMCTRL_CTRLB		0x04	/* NVM control B register */
-#define SAML_NVMCTRL_CTRLC		0x08	/* NVM control B register */
-#define SAML_NVMCTRL_EVCTRL		0x0A	/* NVM control B register */
-#define SAML_NVMCTRL_INTENCLR	0x0C	/* NVM Interrupt Flag Status & Clear */
-#define SAML_NVMCTRL_INTENSET	0x10	/* NVM Interrupt Flag Status & Clear */
-#define SAML_NVMCTRL_INTFLAG	0x14	/* NVM Interrupt Flag Status & Clear */
-#define SAML_NVMCTRL_STATUS		0x18	/* NVM status register */
-#define SAML_NVMCTRL_ADDR		0x1C	/* NVM address register */
-#define SAML_NVMCTRL_SULCK		0x20	/* NVM address register */
-#define SAML_NVMCTRL_NSULCK		0x22	/* NVM address register */
-#define SAML_NVMCTRL_PARAM		0x24	/* NVM parameters register */
+#define SAML_DSU_CMD_PREFIX		0x44424700
+#define SAML_DSU_CMD_INIT		0x55
+#define SAML_DSU_CMD_EXIT		0xAA
+#define SAML_DSU_CMD_RESET		0x52
+#define SAML_DSU_CMD_CE0		0xE0
+#define SAML_DSU_CMD_CE1		0xE1
+#define SAML_DSU_CMD_CE2		0xE2
+#define SAML_DSU_CMD_CHIPERASE		0xE3
 
-#define SAML_NVMCTRL_SULCK_BS	(1u << 0)
-#define SAML_NVMCTRL_SULCK_AS	(1u << 1)
-#define SAML_NVMCTRL_SULCK_DS	(1u << 2)
+#define SAML_DSU_SIG_COMM		0xEC000020
+#define SAML_DSU_SIG_CMD_SUCCESS	0xEC000021
+#define SAML_DSU_SIG_CMD_VALID		0xEC000024
+#define SAML_DSU_SIG_BOOTOK		0xEC000039
 
-#define SAML_L10_BOCOR_BOOTPROT	0x04
-#define SAML_L10_BOCOR_CRCKEY	0x40
+#define SAML_NVMCTRL_CTRLA		0x00			/* NVM control A register */
+#define SAML_NVMCTRL_CTRLB		0x04			/* NVM control B register */
+#define SAML_NVMCTRL_CTRLC		0x08			/* NVM control B register */
+#define SAML_NVMCTRL_EVCTRL		0x0A			/* NVM control B register */
+#define SAML_NVMCTRL_INTENCLR		0x0C			/* NVM Interrupt Flag Status & Clear */
+#define SAML_NVMCTRL_INTENSET		0x10			/* NVM Interrupt Flag Status & Clear */
+#define SAML_NVMCTRL_INTFLAG		0x14			/* NVM Interrupt Flag Status & Clear */
+#define SAML_NVMCTRL_STATUS		0x18			/* NVM status register */
+#define SAML_NVMCTRL_ADDR		0x1C			/* NVM address register */
+#define SAML_NVMCTRL_SULCK		0x20			/* NVM address register */
+#define SAML_NVMCTRL_NSULCK		0x22			/* NVM address register */
+#define SAML_NVMCTRL_PARAM		0x24			/* NVM parameters register */
+
+#define SAML_NVMCTRL_SULCK_BS		(1u << 0)
+#define SAML_NVMCTRL_SULCK_AS		(1u << 1)
+#define SAML_NVMCTRL_SULCK_DS		(1u << 2)
+
+#define SAML_L10_BOCOR_BOOTPROT		0x04
+#define SAML_L10_BOCOR_CRCKEY		0x40
 
 #define SAML_L11_BOCOR_BS		0x01
 #define SAML_L11_BOCOR_BNSC		0x02
-#define SAML_L11_BOCOR_BOOTOPT	0x03
-#define SAML_L11_BOCOR_BOOTPROT	0x04
+#define SAML_L11_BOCOR_BOOTOPT		0x03
+#define SAML_L11_BOCOR_BOOTPROT		0x04
 #define SAML_L11_BOCOR_BCR		0x06
-#define SAML_L11_BOCOR_BOCORCRC	0x08
-#define SAML_L11_BOCOR_CEKEY0	0x10
-#define SAML_L11_BOCOR_CEKEY1	0x20
-#define SAML_L11_BOCOR_CEKEY2	0x30
-#define SAML_L11_BOCOR_CRCKEY	0x40
-#define SAML_L11_BOCOR_BOOTKEY	0x50
+#define SAML_L11_BOCOR_BOCORCRC		0x08
+#define SAML_L11_BOCOR_CEKEY0		0x10
+#define SAML_L11_BOCOR_CEKEY1		0x20
+#define SAML_L11_BOCOR_CEKEY2		0x30
+#define SAML_L11_BOCOR_CRCKEY		0x40
+#define SAML_L11_BOCOR_BOOTKEY		0x50
 #define SAML_L11_BOCOR_BOCORHASH	0xE0
 
-#define SAML_L11_UROW_AS	0x08
-#define SAML_L11_UROW_ANSC	0x09
-#define SAML_L11_UROW_DS	0x0A
+#define SAML_L11_UROW_AS		0x08
+#define SAML_L11_UROW_ANSC		0x09
+#define SAML_L11_UROW_DS		0x0A
 
-#define SAML_CMDEX_KEY		0xA5UL
-#define SAML_NVM_CMD(n)		((SAML_CMDEX_KEY << 8) | (n & 0x7F))
+#define SAML_CMDEX_KEY			0xA5UL
+#define SAML_NVM_CMD(n)			((SAML_CMDEX_KEY << 8) | (n & 0x7F))
 
 /* NVMCTRL commands.  See Table 20-4 in 42129F–SAM–10/2013 */
-#define SAML_NVM_CMD_ER		0x02		/* Erase Row */
-#define SAML_NVM_CMD_WP		0x04		/* Write Page */
-#define SAML_NVM_CMD_EAR	0x05		/* Erase Auxiliary Row */
-#define SAML_NVM_CMD_WAP	0x06		/* Write Auxiliary Page */
-#define SAML_NVM_CMD_LR		0x40		/* Lock Region */
-#define SAML_NVM_CMD_UR		0x41		/* Unlock Region */
-#define SAML_NVM_CMD_SPRM	0x42		/* Set Power Reduction Mode */
-#define SAML_NVM_CMD_CPRM	0x43		/* Clear Power Reduction Mode */
-#define SAML_NVM_CMD_PBC	0x44		/* Page Buffer Clear */
-#define SAML_NVM_CMD_SSB	0x45		/* Set Security Bit */
-#define SAML_NVM_CMD_INVALL	0x46		/* Invalidate all caches */
+#define SAML_NVM_CMD_ER			0x02		/* Erase Row */
+#define SAML_NVM_CMD_WP			0x04		/* Write Page */
+#define SAML_NVM_CMD_EAR		0x05		/* Erase Auxiliary Row */
+#define SAML_NVM_CMD_WAP		0x06		/* Write Auxiliary Page */
+#define SAML_NVM_CMD_LR			0x40		/* Lock Region */
+#define SAML_NVM_CMD_UR			0x41		/* Unlock Region */
+#define SAML_NVM_CMD_SPRM		0x42		/* Set Power Reduction Mode */
+#define SAML_NVM_CMD_CPRM		0x43		/* Clear Power Reduction Mode */
+#define SAML_NVM_CMD_PBC		0x44		/* Page Buffer Clear */
+#define SAML_NVM_CMD_INVALL		0x46		/* Invalidate all caches */
+#define SAML_NVM_CMD_SDAL0		0x4B		/* Set DAL=0 */
+#define SAML_NVM_CMD_SDAL1		0x4C		/* Set DAL=1 */
 
 #define SAML_NVMCTL_ADDR_ARRAY_FLASH	(0u << 22)
-#define SAML_NVMCTL_ADDR_ARRAY_DATA		(1u << 22)
-#define SAML_NVMCTL_ADDR_ARRAY_NVM		(2u << 22)
+#define SAML_NVMCTL_ADDR_ARRAY_DATA	(1u << 22)
+#define SAML_NVMCTL_ADDR_ARRAY_NVM	(2u << 22)
 
 /* NVMCTRL bits */
 #define SAML_NVMCTL_CTRLC_MANW		(1u << 0)
@@ -92,19 +117,19 @@
 #define SAML_NVMCTL_INTFLAG_NSCHK	(1u << 5)
 
 /* Known identifiers */
-#define SAML_PROCESSOR_M23	0x02
-#define SAML_FAMILY_L		0x01
-#define SAML_SERIES_10		0x04
-#define SAML_SERIES_11		0x03
+#define SAML_PROCESSOR_M23		0x02
+#define SAML_FAMILY_L			0x01
+#define SAML_SERIES_10			0x04
+#define SAML_SERIES_11			0x03
 
 /* Device ID macros */
-#define SAML_GET_PROCESSOR(id) (id >> 28)
-#define SAML_GET_FAMILY(id) (((id >> 23) & 0x1F))
-#define SAML_GET_SERIES(id) (((id >> 16) & 0x3F))
-#define SAML_GET_DEVSEL(id) (id & 0xFF)
+#define SAML_GET_PROCESSOR(id)		(id >> 28)
+#define SAML_GET_FAMILY(id)		(((id >> 23) & 0x1F))
+#define SAML_GET_SERIES(id)		(((id >> 16) & 0x3F))
+#define SAML_GET_DEVSEL(id)		(id & 0xFF)
 
 /* Bits to mask out lockbits in user row */
-#define NVMUSERROW_LOCKBIT_MASK ((uint64_t)0x0000FFFFFFFFFFFF)
+#define NVMUSERROW_LOCKBIT_MASK		((uint64_t)0x0000FFFFFFFFFFFF)
 
 struct saml_part {
 	uint8_t id;
@@ -931,9 +956,18 @@ COMMAND_HANDLER(saml_handle_set_security_command)
 	int res = ERROR_OK;
 	struct target *target = get_current_target(CMD_CTX);
 
-	if (CMD_ARGC < 1 || (CMD_ARGC >= 1 && (strcmp(CMD_ARGV[0], "enable")))) {
-		command_print(CMD, "supply the \"enable\" argument to proceed.");
-		return ERROR_COMMAND_SYNTAX_ERROR;
+	if (CMD_ARGC < 1) {
+		goto syntax_error;
+	}
+
+	uint16_t nvm_cmd;
+	
+	if (strcmp(CMD_ARGV[0], "dal0") == 0) {
+		nvm_cmd = SAML_NVM_CMD_SDAL0;
+	} else if (strcmp(CMD_ARGV[0], "dal1") == 0) {
+		nvm_cmd = SAML_NVM_CMD_SDAL1;
+	} else {
+		goto syntax_error;
 	}
 
 	if (target) {
@@ -942,7 +976,7 @@ COMMAND_HANDLER(saml_handle_set_security_command)
 			return ERROR_TARGET_NOT_HALTED;
 		}
 
-		res = saml_issue_nvmctrl_command(target, SAML_NVM_CMD_SSB);
+		res = saml_issue_nvmctrl_command(target, nvm_cmd);
 
 		/* Check (and clear) error conditions */
 		if (res == ERROR_OK)
@@ -952,6 +986,10 @@ COMMAND_HANDLER(saml_handle_set_security_command)
 	}
 
 	return res;
+
+syntax_error:
+	command_print(CMD, "supply the \"dal0\" or \"dal1\" argument to proceed.");
+	return ERROR_COMMAND_SYNTAX_ERROR;
 }
 
 COMMAND_HANDLER(saml_handle_eeprom_command)
@@ -1147,9 +1185,46 @@ COMMAND_HANDLER(saml_handle_bootloader_command)
 }
 
 
+static int bootrom_command(struct target *target, uint8_t command)
+{
+	int retval = target_write_u32(target, SAML_DSU + SAML_DSU_BCC0, SAML_DSU_CMD_PREFIX | command);
+	if (retval != ERROR_OK)
+		return retval;
+
+	uint8_t status;
+	do {
+		usleep(100);
+		int retval2 = target_read_u8(target, SAML_DSU + SAML_DSU_STATUSB, &status);
+		if (retval2 != ERROR_OK)
+			return retval2;
+	} while(status & SAML_DSU_STATUSB_BCCD0);
+
+	return ERROR_OK;
+}
+
+
+static int bootrom_status(struct target *target, uint8_t *reply, uint32_t *status)
+{
+	uint8_t statusb;
+	*reply = 0;
+	int retval = target_read_u8(target, SAML_DSU + SAML_DSU_STATUSB, &statusb);
+	if (retval != ERROR_OK)
+		return retval;
+	if (statusb & SAML_DSU_STATUSB_BCCD1)
+	{
+		*reply = 1;
+		int retval2 = target_read_u32(target, SAML_DSU + SAML_DSU_BCC1, status);
+		if (retval2 != ERROR_OK)
+			return retval2;
+	}
+	return ERROR_OK;
+}
+
 
 COMMAND_HANDLER(saml_handle_reset_deassert)
 {
+	uint8_t br_reply;
+	uint32_t br_status;
 	struct target *target = get_current_target(CMD_CTX);
 	int retval = ERROR_OK;
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
@@ -1159,6 +1234,46 @@ COMMAND_HANDLER(saml_handle_reset_deassert)
 	if (!target_was_examined(target))
 		target_examine_one(target);
 	target_poll(target);
+
+	/* Clear CPU Reset Phase Extension bit */
+	retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_CRSTEXT);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Recommanded to wait 5ms before checking bootrom status */
+	usleep(5000);
+
+	/* Check BootROM potential errors */
+	retval = bootrom_status(target, &br_reply, &br_status);
+	if (retval != ERROR_OK)
+		return retval;
+	if (br_reply) {
+		LOG_ERROR("Bootrom error: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	/* Exit BootROM */
+	retval = bootrom_command(target, SAML_DSU_CMD_EXIT);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Check DSU CMD exit */
+	retval = bootrom_status(target, &br_reply, &br_status);
+	if (retval != ERROR_OK)
+		return retval;
+	if (!br_reply) {
+		LOG_ERROR("No BootROM response");
+		return ERROR_FAIL;
+	}
+	if (br_status != SAML_DSU_SIG_BOOTOK) {
+		LOG_ERROR("BootROM doesn't exit correctly: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	/* Disable MPU */
+	retval = target_write_u32(target, CORTEX_M23_MPU_CTRL, 0x0);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* In case of sysresetreq, debug retains state set in cortex_m_assert_reset()
 	 * so we just release reset held by DSU
@@ -1175,10 +1290,102 @@ COMMAND_HANDLER(saml_handle_reset_deassert)
 		/* do not return on error here, releasing DSU reset is more important */
 	}
 
-	/* clear CPU Reset Phase Extension bit */
-	int retval2 = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, (1<<1));
-	if (retval2 != ERROR_OK)
-		return retval2;
+	/* CPU Park exit */
+	retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_BREXT);
+	if (retval != ERROR_OK)
+		return retval;
+
+	return retval;
+}
+
+COMMAND_HANDLER(saml_handle_chip_erase)
+{
+	uint8_t br_reply;
+	uint32_t br_status;
+	struct target *target = get_current_target(CMD_CTX);
+	int retval = ERROR_OK;
+
+	/* If the target has been unresponsive before, try to re-establish
+	 * communication now - CPU is held in reset by DSU, DAP is working */
+	if (!target_was_examined(target))
+		target_examine_one(target);
+	target_poll(target);
+
+	/* Clear CPU Reset Phase Extension bit */
+	retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_CRSTEXT);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Recommanded to wait 5ms before checking bootrom status */
+	usleep(5000);
+
+	/* Check BootROM potential errors */
+	retval = bootrom_status(target, &br_reply, &br_status);
+	if (retval != ERROR_OK)
+		return retval;
+	if (br_reply) {
+		LOG_ERROR("Bootrom error: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	/* Interactive BootROM */
+	retval = bootrom_command(target, SAML_DSU_CMD_INIT);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Check DSU CMD Init */
+	retval = bootrom_status(target, &br_reply, &br_status);
+	if (retval != ERROR_OK)
+		return retval;
+	if (!br_reply) {
+		LOG_ERROR("No BootROM response");
+		return ERROR_FAIL;
+	}
+	if (br_status != SAML_DSU_SIG_COMM) {
+		LOG_ERROR("BootROM doesn't init correctly: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	/* Perform chip erase */
+	retval = bootrom_command(target, SAML_DSU_CMD_CHIPERASE);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Check DSU CMD chip erase */
+	retval = bootrom_status(target, &br_reply, &br_status);
+	if (retval != ERROR_OK)
+		return retval;
+	if (!br_reply) {
+		LOG_ERROR("No BootROM response");
+		return ERROR_FAIL;
+	}
+	if (br_status != SAML_DSU_SIG_CMD_VALID) {
+		LOG_ERROR("BootROM doesn't erase chip correctly: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	int64_t endtime = timeval_ms() + 500;
+	while (1) {
+		retval = bootrom_status(target, &br_reply, &br_status);
+		if (retval != ERROR_OK)
+			return retval;
+		if (br_reply) {
+			break;
+		}
+		if (timeval_ms() >= endtime) {
+			LOG_ERROR("No BootROM response");
+			return ERROR_FAIL;
+		}
+	}
+	if (br_status != SAML_DSU_SIG_CMD_SUCCESS) {
+		LOG_ERROR("BootROM doesn't erase chip correctly: %x", br_status);
+		return ERROR_FAIL;
+	}
+
+	/* Reset the chip */
+	retval = bootrom_command(target, SAML_DSU_CMD_RESET);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return retval;
 }
@@ -1189,6 +1396,14 @@ static const struct command_registration atsaml_exec_command_handlers[] = {
 		.handler = saml_handle_reset_deassert,
 		.mode = COMMAND_EXEC,
 		.help = "Deassert internal reset held by DSU.",
+		.usage = "",
+	},
+	{
+		.name = "dsu_chip_erase",
+		.handler = saml_handle_chip_erase,
+		.mode = COMMAND_EXEC,
+		.help = "Erase the entire Flash by using the Chip-"
+			"Erase feature from the BootROM.",
 		.usage = "",
 	},
 	{
@@ -1215,7 +1430,7 @@ static const struct command_registration atsaml_exec_command_handlers[] = {
 			"This makes it impossible to read the Flash contents. "
 			"The only way to undo this is to issue the chip-erase "
 			"command.",
-		.usage = "'enable'",
+		.usage = "'dal0' or 'dal1'",
 	},
 	{
 		.name = "eeprom",
