@@ -1228,6 +1228,13 @@ COMMAND_HANDLER(saml_handle_reset_deassert)
 		return ERROR_FAIL;
 	}
 
+	if (!target->reset_halt) {
+		/* Directly go to APP */
+		retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_BREXT);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
 	/* Exit BootROM */
 	retval = bootrom_command(target, SAML_DSU_CMD_EXIT);
 	if (retval != ERROR_OK)
@@ -1246,30 +1253,32 @@ COMMAND_HANDLER(saml_handle_reset_deassert)
 		return ERROR_FAIL;
 	}
 
-	/* Disable MPU */
-	retval = target_write_u32(target, CORTEX_M23_MPU_CTRL, 0x0);
-	if (retval != ERROR_OK)
-		return retval;
+	if (target->reset_halt) {
+		/* Disable MPU */
+		retval = target_write_u32(target, CORTEX_M23_MPU_CTRL, 0x0);
+		if (retval != ERROR_OK)
+			return retval;
 
-	/* In case of sysresetreq, debug retains state set in cortex_m_assert_reset()
-	 * so we just release reset held by DSU
-	 *
-	 * n_RESET (srst) clears the DP, so reenable debug and set vector catch here
-	 *
-	 * After vectreset DSU release is not needed however makes no harm
-	 */
-	if (target->reset_halt && (jtag_reset_config & RESET_HAS_SRST)) {
-		retval = target_write_u32(target, DCB_DHCSR, DBGKEY | C_HALT | C_DEBUGEN);
-		if (retval == ERROR_OK)
-			retval = target_write_u32(target, DCB_DEMCR,
-				TRCENA | VC_HARDERR | VC_BUSERR | VC_CORERESET);
-		/* do not return on error here, releasing DSU reset is more important */
+		/* In case of sysresetreq, debug retains state set in cortex_m_assert_reset()
+	 	* so we just release reset held by DSU
+	 	*
+	 	* n_RESET (srst) clears the DP, so reenable debug and set vector catch here
+	 	*
+	 	* After vectreset DSU release is not needed however makes no harm
+	 	*/
+		if (jtag_reset_config & RESET_HAS_SRST) {
+			retval = target_write_u32(target, DCB_DHCSR, DBGKEY | C_HALT | C_DEBUGEN);
+			if (retval == ERROR_OK)
+				retval = target_write_u32(target, DCB_DEMCR,
+					TRCENA | VC_HARDERR | VC_BUSERR | VC_CORERESET);
+			/* do not return on error here, releasing DSU reset is more important */
+		}
+
+		/* CPU Park exit */
+		retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_BREXT);
+		if (retval != ERROR_OK)
+			return retval;
 	}
-
-	/* CPU Park exit */
-	retval = target_write_u8(target, SAML_DSU + SAML_DSU_STATUSA, SAML_DSU_STATUSA_BREXT);
-	if (retval != ERROR_OK)
-		return retval;
 
 	return retval;
 }
