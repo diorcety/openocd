@@ -92,8 +92,6 @@
 /* NVMCTRL commands.  See Table 20-4 in 42129F–SAM–10/2013 */
 #define SAML_NVM_CMD_ER			0x02		/* Erase Row */
 #define SAML_NVM_CMD_WP			0x04		/* Write Page */
-#define SAML_NVM_CMD_EAR		0x05		/* Erase Auxiliary Row */
-#define SAML_NVM_CMD_WAP		0x06		/* Write Auxiliary Page */
 #define SAML_NVM_CMD_LR			0x40		/* Lock Region */
 #define SAML_NVM_CMD_UR			0x41		/* Unlock Region */
 #define SAML_NVM_CMD_SPRM		0x42		/* Set Power Reduction Mode */
@@ -174,7 +172,7 @@ struct saml_family {
 static const struct saml_family saml_families[] = {
 	{ SAML_PROCESSOR_M23, SAML_FAMILY_L, SAML_SERIES_10,
 		saml10_parts, ARRAY_SIZE(saml10_parts),
-		(uint64_t)0xFFFF03FFFC01FF77 },
+		(uint64_t)0x03FFFFFFFFFC },
 	{ SAML_PROCESSOR_M23, SAML_FAMILY_L, SAML_SERIES_11,
 		saml11_parts, ARRAY_SIZE(saml11_parts),
 		(uint64_t)0xFFFF03FFFC01FF77 },
@@ -676,7 +674,7 @@ static int saml_modify_user_row_masked(struct target *target,
 	}
 	if (manual_wp) {
 		/* Trigger flash write */
-		res = saml_issue_nvmctrl_command(target, SAML_NVM_CMD_WAP);
+		res = saml_issue_nvmctrl_command(target, SAML_NVM_CMD_WP);
 	} else {
 		res = saml_check_error(target);
 	}
