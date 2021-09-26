@@ -927,28 +927,6 @@ COMMAND_HANDLER(saml_handle_info_command)
 	return ERROR_OK;
 }
 
-COMMAND_HANDLER(saml_handle_chip_erase_command)
-{
-	struct target *target = get_current_target(CMD_CTX);
-	int res = ERROR_FAIL;
-
-	if (target) {
-		/* Enable access to the DSU by disabling the write protect bit */
-		target_write_u32(target, SAML_PAC1, (1<<1));
-		/* intentionally without error checking - not accessible on secured chip */
-
-		/* Tell the DSU to perform a full chip erase.  It takes about 240ms to
-		 * perform the erase. */
-		res = target_write_u8(target, SAML_DSU + SAML_DSU_CTRL_EXT, (1<<4));
-		if (res == ERROR_OK)
-			command_print(CMD, "chip erase started");
-		else
-			command_print(CMD, "write to DSU CTRL failed");
-	}
-
-	return res;
-}
-
 COMMAND_HANDLER(saml_handle_set_security_command)
 {
 	int res = ERROR_OK;
@@ -1410,14 +1388,6 @@ static const struct command_registration atsaml_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.help = "Print information about the current atsaml chip "
 			"and its flash configuration.",
-		.usage = "",
-	},
-	{
-		.name = "chip-erase",
-		.handler = saml_handle_chip_erase_command,
-		.mode = COMMAND_EXEC,
-		.help = "Erase the entire Flash by using the Chip-"
-			"Erase feature in the Device Service Unit (DSU).",
 		.usage = "",
 	},
 	{
