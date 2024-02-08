@@ -1665,6 +1665,39 @@ COMMAND_HANDLER(stm32f2x_handle_options_write_command)
 	return retval;
 }
 
+COMMAND_HANDLER(stm32f2x_handle_options_load_command)
+{
+	int retval;
+	struct flash_bank *bank;
+	struct stm32x_flash_bank *stm32x_info = NULL;
+	uint16_t user_options, boot_addr0, boot_addr1, options_mask;
+
+	if (CMD_ARGC != 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	retval = CALL_COMMAND_HANDLER(flash_command_get_bank, 0, &bank);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = stm32x_read_options(bank);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (stm32x_write_options(bank) != ERROR_OK) {
+		command_print(CMD, "stm32f2x failed to write options");
+		return ERROR_OK;
+	}
+
+	/* switching between single- and dual-bank modes requires re-probe */
+	/* ... and reprogramming of whole flash */
+	stm32x_info->probed = false;
+
+	command_print(CMD, "stm32f2x write options complete.\n"
+				"INFO: a reset or power cycle is required "
+				"for the new settings to take effect.");
+	return retval;
+}
+
 COMMAND_HANDLER(stm32f2x_handle_optcr2_write_command)
 {
 	int retval;
@@ -1773,6 +1806,13 @@ static const struct command_registration stm32f2x_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "bank_id user_options [ boot_add0 boot_add1 ]",
 		.help = "Write option bytes",
+	},
+	{
+		.name = "options_load",
+		.handler = stm32f2x_handle_options_load_command,
+		.mode = COMMAND_EXEC,
+		.usage = "bank_id",
+		.help = "Force re-load of device options (will cause device reset).",
 	},
 	{
 		.name = "optcr2_write",
